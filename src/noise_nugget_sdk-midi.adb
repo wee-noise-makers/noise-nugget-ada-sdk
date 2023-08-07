@@ -79,7 +79,6 @@ package body Noise_Nugget_SDK.MIDI is
 
       -- DMA --
       declare
-         use RP.DMA;
          Config : DMA_Configuration;
       begin
          Config.Trigger := DMA_TX_Trigger;
