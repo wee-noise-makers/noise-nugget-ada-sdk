@@ -27,52 +27,54 @@
 .program audio_i2s
 .side_set 2
 
-;;;;;                      ;        /--- BCLK
-;;;;;                      ;        |/-- LRCLK
-;;;;;  bitloop1:           ;        ||
-;;;;;      out pins, 1       side 0b01
-;;;;;      nop               side 0b01
-;;;;;      in pins, 1        side 0b11
-;;;;;      jmp x-- bitloop1  side 0b11
-;;;;;      out pins, 1       side 0b00
-;;;;;      nop               side 0b00
-;;;;;      in pins, 1        side 0b10
-;;;;;      set x, 14         side 0b10
-
-;;;;;  bitloop0:
-;;;;;      out pins, 1       side 0b00
-;;;;;      nop               side 0b00
-;;;;;      in pins, 1        side 0b10
-;;;;;      jmp x-- bitloop0  side 0b10
-;;;;;      out pins, 1       side 0b01
-;;;;;      nop               side 0b01
-;;;;;      in pins, 1        side 0b11
-;;;;;  public entry_point:
-;;;;;      set x, 14         side 0b11
-
+; -- Duplex --
                     ;        /--- BCLK
                     ;        |/-- LRCLK
 bitloop1:           ;        ||
     out pins, 1       side 0b01
     nop               side 0b01
-    nop               side 0b11
+    in pins, 1        side 0b11
     jmp x-- bitloop1  side 0b11
     out pins, 1       side 0b00
     nop               side 0b00
-    nop               side 0b10
+    in pins, 1        side 0b10
     set x, 14         side 0b10
 
 bitloop0:
     out pins, 1       side 0b00
     nop               side 0b00
-    nop               side 0b10
+    in pins, 1        side 0b10
     jmp x-- bitloop0  side 0b10
     out pins, 1       side 0b01
     nop               side 0b01
-    nop               side 0b11
+    in pins, 1        side 0b11
 public entry_point:
     set x, 14         side 0b11
 
+;;;;;; -- Output only --
+;;;;;                    ;        /--- BCLK
+;;;;;                    ;        |/-- LRCLK
+;;;;;bitloop1:           ;        ||
+;;;;;    out pins, 1       side 0b01
+;;;;;    nop               side 0b01
+;;;;;    nop               side 0b11
+;;;;;    jmp x-- bitloop1  side 0b11
+;;;;;    out pins, 1       side 0b00
+;;;;;    nop               side 0b00
+;;;;;    nop               side 0b10
+;;;;;    set x, 14         side 0b10
+
+;;;;;bitloop0:
+;;;;;    out pins, 1       side 0b00
+;;;;;    nop               side 0b00
+;;;;;    nop               side 0b10
+;;;;;    jmp x-- bitloop0  side 0b10
+;;;;;    out pins, 1       side 0b01
+;;;;;    nop               side 0b01
+;;;;;    nop               side 0b11
+;;;;;public entry_point:
+;;;;;    set x, 14         side 0b11
+;;;;;
 % c-sdk {
 
 static inline void audio_i2s_program_init(PIO pio, uint sm, uint offset, uint data_pin, uint clock_pin_base) {

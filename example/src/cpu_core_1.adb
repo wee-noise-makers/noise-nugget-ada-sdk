@@ -6,6 +6,7 @@ with Noise_Nugget_SDK.Audio;
 
 with System.Storage_Elements;
 with Synth;
+with Tresses.Resources;
 
 package body CPU_Core_1 is
 
@@ -44,25 +45,50 @@ package body CPU_Core_1 is
    ----------
 
    procedure Main is
+      use MIDI;
+
+      Key : MIDI.MIDI_Key := MIDI.C4;
+      Next_Key : Time := Clock + Milliseconds (50);
+      On : Boolean := False;
+
    begin
-      if not Noise_Nugget_SDK.Audio.Start (Synth.Callback'Access) then
+      if not Noise_Nugget_SDK.Audio.Start
+        (Tresses.Resources.SAMPLE_RATE,
+         Output_Callback => Synth.Output_Callback'Access,
+         Input_Callback  => Synth.Input_Callback'Access)
+      then
          raise Program_Error with "MDM";
       end if;
 
       Noise_Nugget_SDK.Audio.Set_HP_Volume (0.7, 0.7);
-      loop
-         for Key in MIDI.C1 .. MIDI.C4 loop
-            exit when Synth.Got_MIDI_Input;
-            Synth.Note_On (Key, 127);
-            Busy_Wait_Until (Clock + Milliseconds (100));
-            Synth.Note_Off (Key);
-            Busy_Wait_Until (Clock + Milliseconds (100));
-         end loop;
-         exit when Synth.Got_MIDI_Input;
-      end loop;
+      Noise_Nugget_SDK.Audio.Set_Line_Volume (1, 1.0, 0.0);
+      Noise_Nugget_SDK.Audio.Set_Line_Volume (2, 1.0, 1.0);
+      Noise_Nugget_SDK.Audio.Set_Line_Volume (3, 1.0, 1.0);
+      Noise_Nugget_SDK.Audio.Enable_Mic (True, True);
+      Noise_Nugget_SDK.Audio.Set_ADC_Volume (0.6, 0.6);
+      Noise_Nugget_SDK.Audio.Mixer_To_Output (False, False);
 
       loop
-         null;
+         Synth.Update_Buffer;
+
+         if not Synth.Got_MIDI_Input and then Next_Key < Clock then
+            Next_Key := Next_Key + Milliseconds (10);
+
+            if On then
+               Synth.Note_Off (Key);
+            else
+
+               Synth.Note_On (Key, 127);
+
+               if Key < MIDI.C4 then
+                  Key := Key + 1;
+               else
+                  Key := MIDI.C1;
+               end if;
+            end if;
+
+            On := not On;
+         end if;
       end loop;
    end Main;
 

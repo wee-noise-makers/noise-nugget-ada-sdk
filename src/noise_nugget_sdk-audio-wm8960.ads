@@ -6,6 +6,16 @@ private package Noise_Nugget_SDK.Audio.WM8960 is
 
    procedure Set_HP_Volume (L, R : Audio_Volume);
 
+   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume);
+
+   procedure Enable_Mic (L, R : Boolean);
+
+   procedure Set_Mic_Boost (L, R : Audio_Volume);
+
+   procedure Set_ADC_Volume (L, R : Audio_Volume);
+
+   procedure Mixer_To_Output (L, R : Boolean);
+
 private
 
    REG_LEFT_INPUT_VOLUME    : constant HAL.UInt7 := 16#00#;

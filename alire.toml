@@ -19,3 +19,6 @@ BBQUEUE_RUNTIME_CHECKS = "disabled"
 BBQUEUE_STYLE_CHECKS   = "disabled"
 BBQUEUE_CONTRACTS      = "disabled"
 BBQUEUE_BUILD_MODE     = "optimize"
+
+[[pins]]
+rp2040_hal = { url="https://github.com/JeremyGrosser/rp2040_hal" }

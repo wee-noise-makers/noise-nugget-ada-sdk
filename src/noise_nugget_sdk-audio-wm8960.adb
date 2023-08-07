@@ -110,7 +110,7 @@ package body Noise_Nugget_SDK.Audio.WM8960 is
       I2C1.Write (B2, Status);
 
       if Status /= Ok then
-         raise Program_Error;
+         --  raise Program_Error;
          return False;
       else
          Register_Local_Copy (Reg) := Val;
@@ -139,6 +139,29 @@ package body Noise_Nugget_SDK.Audio.WM8960 is
 
       return Write_Register (Reg, Current);
    end Write_Register_Bit;
+
+   --------------------------
+   -- Write_Register_Multi --
+   --------------------------
+
+   function Write_Register_Multi (Reg      : HAL.UInt7;
+                                  Msb, Lsb : HAL.UInt9;
+                                  Value    : HAL.UInt9)
+                                  return Boolean
+   is
+      Current : UInt9 := Register_Local_Copy (Reg);
+
+      Mask : UInt9 := 1 * 2**Natural (Lsb);
+   begin
+      --  Clear bits for the range we case about
+      for X in Lsb .. Msb loop
+         Current := Current and not Mask;
+         Mask := Mask * 2;
+      end loop;
+
+      Current := Current or Value * 2**Natural (Lsb);
+      return Write_Register (Reg, Current);
+   end Write_Register_Multi;
 
    ------------------------
    -- Gen_Volume_To_UInt --
@@ -207,6 +230,201 @@ package body Noise_Nugget_SDK.Audio.WM8960 is
       Unused := Write_Register_Bit (REG_RIGHT_DAC_VOLUME, 8, 1);
    end Set_DAC_Volume;
 
+   ---------------------
+   -- Set_Line_Volume --
+   ---------------------
+
+   procedure Set_Line_Volume (Line : Line_In_Id; L, R : UInt3) is
+      Unused : Boolean;
+   begin
+      case Line is
+         when 1 =>
+            declare
+               --  The line 1 input boost has a different range than line 2
+               --  and 3. It goes from +30dB to -17.25dB (vs -12dB to +6dB).
+               --  To provide the same control for every line, we only use a
+               --  partial range of the line 1 boost.
+               --
+               --  32 -> +6dB
+               --  56 -> -12dB
+
+               Base : constant UInt9 := 32;
+               L_Scaled : constant UInt9 := Base + UInt9 (L) * 4;
+               R_Scaled : constant UInt9 := Base + UInt9 (R) * 4;
+            begin
+               if L = 0 then
+                  --  Mute
+                  Unused :=
+                    Write_Register (REG_LEFT_INPUT_VOLUME, 2#1_1_1_000000#);
+               else
+                  Unused :=
+                    Write_Register (REG_LEFT_INPUT_VOLUME,
+                                    2#1_0_1_000000# + L_Scaled);
+               end if;
+
+               if R = 0 then
+                  --  Mute
+                  Unused :=
+                    Write_Register (REG_RIGHT_INPUT_VOLUME, 2#1_1_1_000000#);
+               else
+                  Unused :=
+                    Write_Register (REG_RIGHT_INPUT_VOLUME,
+                                    2#1_0_1_000000# + R_Scaled);
+               end if;
+            end;
+         when 2 =>
+            Unused :=
+              Write_Register_Multi (REG_INPUT_BOOST_MIXER_1, 3, 2, UInt9 (L));
+            Unused :=
+              Write_Register_Multi (REG_INPUT_BOOST_MIXER_2, 3, 2, UInt9 (R));
+         when 3 =>
+            Unused :=
+              Write_Register_Multi (REG_INPUT_BOOST_MIXER_1, 6, 4, UInt9 (L));
+            Unused :=
+              Write_Register_Multi (REG_INPUT_BOOST_MIXER_2, 6, 4, UInt9 (R));
+      end case;
+   end Set_Line_Volume;
+
+   ---------------------
+   -- Set_Line_Volume --
+   ---------------------
+
+   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume) is
+      function To_UInt3 is new Gen_Volume_To_UInt (Output_Type => HAL.UInt3,
+                                                   Min        => 2#000#,
+                                                   Max        => 2#111#,
+                                                   Mute_Value => 2#000#);
+   begin
+      Set_Line_Volume (Line, To_UInt3 (L), To_UInt3 (R));
+   end Set_Line_Volume;
+
+   ----------------
+   -- Enable_Mic --
+   ----------------
+
+   procedure Enable_Mic (L, R : Boolean) is
+      Unused : Boolean;
+   begin
+      if L then
+         --  AINL: Analog input gain Left (microphone)
+         Unused := Write_Register_Bit (REG_PWR_MGMT_1, 5, 1);
+
+         --  Enable LMIC
+         Unused := Write_Register_Bit (REG_PWR_MGMT_3, 5, 1);
+
+         --  LNM1
+         Unused := Write_Register_Bit (REG_ADCL_SIGNAL_PATH, 8, 1);
+
+         --  LMIC2B: Left Mic to Boost
+         Unused := Write_Register_Bit (REG_ADCL_SIGNAL_PATH, 3, 1);
+
+         --  LINMUTE
+         Unused := Write_Register (REG_LEFT_INPUT_VOLUME, 2#1_0_1_111000#);
+
+      end if;
+
+      if R then
+         --  AINR: Analog input gain Right (microphone)
+         Unused := Write_Register_Bit (REG_PWR_MGMT_1, 4, 1);
+
+         --  Enable RMIC
+         Unused := Write_Register_Bit (REG_PWR_MGMT_3, 4, 1);
+
+         --  RNM1
+         Unused := Write_Register_Bit (REG_ADCR_SIGNAL_PATH, 8, 1);
+
+         --  RMIC2B: Right Mic to Boost
+         Unused := Write_Register_Bit (REG_ADCR_SIGNAL_PATH, 3, 1);
+
+         --  RINMUTE
+         Unused := Write_Register (REG_RIGHT_INPUT_VOLUME, 2#1_0_1_111000#);
+
+         --  Unused :=
+         --    Write_Register (REG_RIGHT_INPUT_VOLUME, 2#1_1_1_000000#);
+      end if;
+
+      if L or else R then
+         --  Mic bias voltage = 0.65 * AVDD
+         Unused := Write_Register_Bit (REG_ADDITIONAL_CONTROL_4, 0, 1);
+
+         --  Enable Mic bias
+         Unused := Write_Register_Bit (REG_PWR_MGMT_1, 1, 1);
+      else
+         --  Disable Mic bias
+         Unused := Write_Register_Bit (REG_PWR_MGMT_1, 1, 0);
+      end if;
+
+   end Enable_Mic;
+
+   -------------------
+   -- Set_Mic_Boost --
+   -------------------
+
+   procedure Set_Mic_Boost (L, R : Audio_Volume) is
+      function To_UInt9 is new Gen_Volume_To_UInt (Output_Type => HAL.UInt9,
+                                                   Min        => 2#000000#,
+                                                   Max        => 2#111111#,
+                                                   Mute_Value => 2#000000#);
+
+      Unused : Boolean;
+
+      L_Vol : constant UInt9 := To_UInt9 (L);
+      R_Vol : constant UInt9 := To_UInt9 (R);
+   begin
+      if L_Vol = 0 then
+         --  Mute
+         Unused :=
+           Write_Register (REG_LEFT_INPUT_VOLUME, 2#1_1_1_000000#);
+      else
+         Unused :=
+           Write_Register (REG_LEFT_INPUT_VOLUME,
+                           2#1_0_1_000000# + L_Vol);
+      end if;
+
+      if R_Vol = 0 then
+         --  Mute
+         Unused :=
+           Write_Register (REG_RIGHT_INPUT_VOLUME, 2#1_1_1_000000#);
+      else
+         Unused :=
+           Write_Register (REG_RIGHT_INPUT_VOLUME,
+                           2#1_0_1_000000# + R_Vol);
+      end if;
+   end Set_Mic_Boost;
+
+   --------------------
+   -- Set_ADC_Volume --
+   --------------------
+
+   procedure Set_ADC_Volume (L, R : Audio_Volume) is
+      function To_UInt9 is new Gen_Volume_To_UInt
+        (Output_Type => HAL.UInt9,
+         Min        => 2#0000_0000#,
+         Max        => 2#1111_1111#,
+         Mute_Value => 2#0000_0000#);
+
+      Unused : Boolean;
+   begin
+      Unused := Write_Register (REG_LEFT_ADC_VOLUME, To_UInt9 (L));
+
+      Unused := Write_Register (REG_RIGHT_ADC_VOLUME,
+                                2#1_00000000# or To_UInt9 (R));
+   end Set_ADC_Volume;
+
+   ---------------------
+   -- Mixer_To_Output --
+   ---------------------
+
+   procedure Mixer_To_Output (L, R : Boolean) is
+      Unused : Boolean;
+   begin
+      --  LB2LO: Left Boost mixer to Left Output mixer
+      Unused := Write_Register_Bit (REG_BYPASS_1, 7, (if L then 1 else 0));
+
+      --  RB2RO: Right Boost mixer to Right Output mixer
+      Unused := Write_Register_Bit (REG_BYPASS_2, 7, (if R then 1 else 0));
+   end Mixer_To_Output;
+
    ----------------
    -- Initialize --
    ----------------
@@ -263,9 +481,31 @@ package body Noise_Nugget_SDK.Audio.WM8960 is
 
       --  Enable Left Out mix
       Success := Success and then Write_Register_Bit (REG_PWR_MGMT_3, 3, 1);
-
       --  Enable Righ Out mix
       Success := Success and then Write_Register_Bit (REG_PWR_MGMT_3, 2, 1);
+
+      --  Input
+
+      --  LIN3BOOST (line 3 to boost) and LIN2BOOST (line 2 to boost)
+      Success := Success and then
+        Write_Register (REG_INPUT_BOOST_MIXER_1, 2#00_101_101_0#);
+      --  RIN3BOOST (line 3 to boost) and RIN2BOOST (line 2 to boost)
+      Success := Success and then
+        Write_Register (REG_INPUT_BOOST_MIXER_2, 2#00_101_101_0#);
+      -----------
+
+      --  ADCs
+
+      --  ADCR: Enable Right Analog to Digital Converter
+      Success := Success and then Write_Register_Bit (REG_PWR_MGMT_1, 2, 1);
+      --  ADCL: Enable Left Analog to Digital Converter
+      Success := Success and then Write_Register_Bit (REG_PWR_MGMT_1, 3, 1);
+
+      --  Disable ADC LR signal pin and turn it into GPIO1. ADC LR is now in
+      --  sync with DAC LR signal.
+      Success := Success and then
+        Write_Register_Bit (REG_AUDIO_INTERFACE_2, 6, 1);
+      -----------
 
       --  ADC CLK = SYSCLK / 256, DAC CLK = SYSCLK / 256, SYSCLK = MCLK
       Success := Success and then
@@ -274,6 +514,10 @@ package body Noise_Nugget_SDK.Audio.WM8960 is
       --  16-bit audio format
       Success := Success and then
         Write_Register_Bit (REG_AUDIO_INTERFACE_1, 3, 0);
+
+      --  I2C Mode
+      Success := Success and then
+        Write_Register_Bit (REG_AUDIO_INTERFACE_1, 1, 1);
 
       Set_DAC_Volume (2#11111111#, 2#11111111#);
       Set_HP_Volume (2#1011111#, 2#1011111#);

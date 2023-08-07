@@ -1,24 +1,12 @@
+with HAL; use HAL;
 with RP.GPIO;
 with RP.DMA;
 with RP.PWM;
 with RP_Interrupts;
 with RP2040_SVD.Interrupts;
-with RP.ROM.Floating_Point;
 with Noise_Nugget_SDK.Audio.PIO_I2S_ASM;
 
-with Interfaces;
-
 package body Noise_Nugget_SDK.Audio.I2S is
-
-   G_Next_Out : Boolean := False
-     with Volatile, Atomic;
-
-   type Flip_Buffers is array (Boolean) of Stereo_Buffer;
-
-   --  In_Buffers : Flip_Buffers := (others => (others => (0, 0)));
-   Out_Buffers : Flip_Buffers := (others => (others => (0, 0)));
-
-   Sine_Buffer :  Stereo_Buffer := (others => (0, 0));
 
    Data_In     : RP.GPIO.GPIO_Point := (Pin => 0);
    Data_Out    : RP.GPIO.GPIO_Point := (Pin => 1);
@@ -26,60 +14,84 @@ package body Noise_Nugget_SDK.Audio.I2S is
    BCLK        : RP.GPIO.GPIO_Point := (Pin => 3);
    MCLK        : RP.GPIO.GPIO_Point := (Pin => 4);
 
-   DMA_IRQ     : constant RP.DMA.DMA_IRQ_Id := 0;
-
-   Sample_Frequency : constant := 44_100;
-
-   MCLK_Requested_Frequency : constant := 256 * Sample_Frequency;
    MCLK_PWM : constant RP.PWM.PWM_Slice := RP.PWM.To_PWM (MCLK).Slice;
 
-   G_Callback : Audio_Callback := null;
+   Zeroes : constant array (1 .. 64) of UInt32 := (others => 0);
+   Dev_Null : array (1 .. 64) of UInt32 := (others => 0);
+
+   G_Output_Callback : Audio_Callback := null
+     with Atomic, Volatile;
+   G_Input_Callback : Audio_Callback := null
+     with Atomic, Volatile;
 
    ---------------------
    -- DMA_Out_Handler --
    ---------------------
 
    procedure DMA_Out_Handler is
-      To_Send     : Stereo_Buffer renames Out_Buffers (G_Next_Out);
-      To_Callback : Stereo_Buffer renames Out_Buffers (not G_Next_Out);
+      Buffer : System.Address;
+      Len : UInt32;
    begin
 
-      RP.DMA.Ack_IRQ (I2S_OUT_DMA, DMA_IRQ);
+      RP.DMA.Ack_IRQ (I2S_OUT_DMA, I2S_OUT_DMA_IRQ);
 
-      --  RP.DMA.Start
-      --    (Channel => I2S_IN_DMA,
-      --     From    => RP.PIO.RX_FIFO_Address (I2S_PIO, I2S_SM),
-      --     To      => In_Buffer'Address,
-      --     Count   => In_Buffer'Length);
+      if G_Output_Callback /= null then
+         G_Output_Callback.all (Buffer, Len);
+      else
+         Buffer := Zeroes'Address;
+         Len := Zeroes'Length;
+      end if;
 
       RP.DMA.Start
         (Channel => I2S_OUT_DMA,
-         From    => To_Send'Address,
+         From    => Buffer,
          To      => RP.PIO.TX_FIFO_Address (I2S_PIO, I2S_SM),
-         Count   => To_Send'Length);
+         Count   => Len);
+   end DMA_Out_Handler;
 
-      if G_Callback /= null then
-         G_Callback.all (To_Callback);
+   --------------------
+   -- DMA_In_Handler --
+   --------------------
+
+   procedure DMA_In_Handler is
+      Buffer : System.Address;
+      Len : UInt32;
+   begin
+
+      RP.DMA.Ack_IRQ (I2S_IN_DMA, I2S_IN_DMA_IRQ);
+
+      if G_Input_Callback /= null then
+         G_Input_Callback.all (Buffer, Len);
       else
-         To_Callback := Sine_Buffer;
+         Buffer := Dev_Null'Address;
+         Len := Dev_Null'Length;
       end if;
 
-      G_Next_Out := not G_Next_Out;
-   end DMA_Out_Handler;
+      RP.DMA.Start
+        (Channel => I2S_IN_DMA,
+         From    => RP.PIO.RX_FIFO_Address (I2S_PIO, I2S_SM),
+         To      => Buffer,
+         Count   => Len);
+   end DMA_In_Handler;
 
    ----------------
    -- Initialize --
    ----------------
 
-   function Initialize (Callback : Audio_Callback) return Boolean is
-      use RP.DMA;
+   function Initialize (Sample_Rate     : Positive;
+                        Output_Callback : Audio_Callback;
+                        Input_Callback  : Audio_Callback)
+                        return Boolean
+   is
       use RP.PIO;
       use RP.GPIO;
       use Noise_Nugget_SDK.Audio.PIO_I2S_ASM;
 
       Config : PIO_SM_Config := Default_SM_Config;
 
-      Sample_Rate       : constant RP.Hertz := RP.Hertz (Sample_Frequency);
+      Sample_Frequency : constant RP.Hertz := RP.Hertz (Sample_Rate);
+      MCLK_Requested_Frequency : constant RP.Hertz := 256 * Sample_Frequency;
+
       Sample_Bits       : constant := 16;
       Cycles_Per_Sample : constant := 4;
       Channels          : constant := 2;
@@ -102,7 +114,6 @@ package body Noise_Nugget_SDK.Audio.I2S is
 
       -- I2S PIO --
 
-      Enable (I2S_PIO);
       Load (I2S_PIO,
             Prog   => Audio_I2s_Program_Instructions,
             Offset => I2S_Offset);
@@ -111,8 +122,14 @@ package body Noise_Nugget_SDK.Audio.I2S is
       Set_In_Pins (Config, Data_In.Pin);
       Set_Sideset_Pins (Config, LRCLK.Pin);
       Set_Sideset (Config, 2, False, False);
-      Set_Out_Shift (Config, False, True, 32);
-      Set_In_Shift (Config, False, True, 32);
+      Set_Out_Shift (Config,
+                     Shift_Right    => False,
+                     Autopull       => True,
+                     Pull_Threshold => Sample_Bits * Channels);
+      Set_In_Shift (Config,
+                    Shift_Right    => False,
+                    Autopush       => True,
+                    Push_Threshold => Sample_Bits * Channels);
 
       Set_Wrap (Config,
           Wrap        => I2S_Offset + Audio_I2s_Wrap,
@@ -136,11 +153,11 @@ package body Noise_Nugget_SDK.Audio.I2S is
 
       Set_Enabled (I2S_PIO, I2S_SM, True);
 
+      -- I2S DMA Output --
       RP_Interrupts.Attach_Handler (DMA_Out_Handler'Access,
                                     RP2040_SVD.Interrupts.DMA_IRQ_0_Interrupt,
                                     RP_Interrupts.Interrupt_Priority'Last);
 
-      -- I2S DMA --
       DMA_Config.Trigger := I2S_OUT_DMA_Trigger;
       DMA_Config.High_Priority := True;
       DMA_Config.Increment_Read := True;
@@ -148,52 +165,33 @@ package body Noise_Nugget_SDK.Audio.I2S is
       DMA_Config.Data_Size := Transfer_32;
       DMA_Config.Quiet := False; -- Enable interrupt
       RP.DMA.Configure (I2S_OUT_DMA, DMA_Config);
-      RP.DMA.Enable_IRQ (I2S_OUT_DMA, DMA_IRQ);
+
+      G_Output_Callback := Output_Callback;
+
+      --  Start a first output transfer
+      DMA_Out_Handler;
+      RP.DMA.Enable_IRQ (I2S_OUT_DMA, I2S_OUT_DMA_IRQ);
+
+      -- I2S DMA Input --
+      RP_Interrupts.Attach_Handler (DMA_In_Handler'Access,
+                                    RP2040_SVD.Interrupts.DMA_IRQ_1_Interrupt,
+                                    RP_Interrupts.Interrupt_Priority'Last);
 
       DMA_Config.Trigger := I2S_IN_DMA_Trigger;
-      DMA_Config.High_Priority := True;
+      DMA_Config.High_Priority := False;
       DMA_Config.Increment_Read := False;
       DMA_Config.Increment_Write := True;
       DMA_Config.Data_Size := Transfer_32;
+      DMA_Config.Quiet := False; -- Enable interrupt
       RP.DMA.Configure (I2S_IN_DMA, DMA_Config);
 
-      --  Start a first transfer
-      DMA_Out_Handler;
+      G_Input_Callback := Input_Callback;
 
-      G_Callback := Callback;
+      --  Start a first input transfer
+      DMA_In_Handler;
+      RP.DMA.Enable_IRQ (I2S_IN_DMA, I2S_IN_DMA_IRQ);
 
       return True;
    end Initialize;
 
-   ---------------
-   -- Init_Sine --
-   ---------------
-
-   procedure Init_Sine is
-      --  Wrap fsin to convert to and from C_float
-      function Sin (F : Float) return Float is
-        (RP.ROM.Floating_Point.fsin (F));
-
-      Pi        : constant := 3.14159;  --  probably enough digits
-      W         : constant := 2.0 * Pi; --  angular velocity
-      Gain      : Float;
-      Period    : Float;                --  time per sample (seconds)
-      F         : Float;
-   begin
-      Gain := Float (Interfaces.Integer_16'Last) * 0.8;
-      Period := 1.0 / Float (Sine_Buffer'Length);
-      for T in Sine_Buffer'Range loop
-         --  F := Sin (2.0 * Pi * T * (1.0 / Sample_Rate));
-         F := Float (T);
-         F := F * Period;
-         F := F * W;
-         F := Sin (F);
-         F := F * Gain;
-         Sine_Buffer (T) := (Interfaces.Integer_16 (F),
-                             Interfaces.Integer_16 (F));
-      end loop;
-   end Init_Sine;
-
-begin
-   Init_Sine;
 end Noise_Nugget_SDK.Audio.I2S;
