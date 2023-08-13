@@ -48,13 +48,8 @@ private
 
    XOSC_Frequency : constant := 12_000_000;
 
-   I2S_OUT_DMA     : constant RP.DMA.DMA_Channel_Id := 0;
    I2S_OUT_DMA_IRQ : constant RP.DMA.DMA_IRQ_Id := 0;
-
-   I2S_IN_DMA     : constant RP.DMA.DMA_Channel_Id := I2S_OUT_DMA + 1;
    I2S_IN_DMA_IRQ : constant RP.DMA.DMA_IRQ_Id := 1;
-
-   MIDI_UART_TX_DMA : constant RP.DMA.DMA_Channel_Id := 2;
 
    -- PIO 0 --
 
@@ -70,7 +65,6 @@ private
    WS2812_PIO    :          RP.PIO.PIO_Device renames RP.Device.PIO_0;
    WS2812_SM     : constant RP.PIO.PIO_SM := 2;
    WS2812_Offset : constant RP.PIO.PIO_Address := Encoder_Last + 1;
-   WS2812_DMA    : constant RP.DMA.DMA_Channel_Id := I2S_IN_DMA + 1;
 
    -- PIO 1 --
 
@@ -87,5 +81,13 @@ private
    --  Because of limited resources (DMA, PIO state machines) the WS2812
    --  generic package can only be instantiated once. The only way I found
    --  to check this is at run-time.
+
+   -- DMA --
+
+   I2S_OUT_DMA      : constant RP.DMA.DMA_Channel_Id := 0;
+   I2S_IN_DMA       : constant RP.DMA.DMA_Channel_Id := I2S_OUT_DMA + 1;
+   WS2812_DMA       : constant RP.DMA.DMA_Channel_Id := I2S_IN_DMA + 1;
+   MIDI_UART_TX_DMA : constant RP.DMA.DMA_Channel_Id := WS2812_DMA + 1;
+   Screen_SPI_DMA   : constant RP.DMA.DMA_Channel_Id := MIDI_UART_TX_DMA + 1;
 
 end Noise_Nugget_SDK;
