@@ -29,6 +29,28 @@ package body Noise_Nugget_SDK.WS2812 is
    end Set_RGB;
 
    -------------
+   -- Set_RGB --
+   -------------
+
+   procedure Set_RGB (Id  : LED_Id;
+                      RGB : RGB_Rec)
+   is
+   begin
+      Strip.Set_RGB (Positive (Id), RGB.R, RGB.G, RGB.B);
+   end Set_RGB;
+
+   -------------
+   -- Set_Hue --
+   -------------
+
+   procedure Set_Hue (Id  : LED_Id;
+                      H   : Hue)
+   is
+   begin
+      Set_RGB (Id, Hue_To_RGB (H));
+   end Set_Hue;
+
+   -------------
    -- Set_HSV --
    -------------
 
