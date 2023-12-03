@@ -5,6 +5,7 @@ with RP.PWM;
 with RP_Interrupts;
 with RP2040_SVD.Interrupts;
 with Noise_Nugget_SDK.Audio.PIO_I2S_ASM;
+with Cortex_M.NVIC;
 
 package body Noise_Nugget_SDK.Audio.I2S is
 
@@ -158,6 +159,9 @@ package body Noise_Nugget_SDK.Audio.I2S is
                                     RP2040_SVD.Interrupts.DMA_IRQ_0_Interrupt,
                                     RP_Interrupts.Interrupt_Priority'Last);
 
+      Cortex_M.NVIC.Set_Priority (RP2040_SVD.Interrupts.DMA_IRQ_0_Interrupt,
+                                  Cortex_M.NVIC.Interrupt_Priority'First);
+
       DMA_Config.Trigger := I2S_OUT_DMA_Trigger;
       DMA_Config.High_Priority := True;
       DMA_Config.Increment_Read := True;
@@ -176,6 +180,10 @@ package body Noise_Nugget_SDK.Audio.I2S is
       RP_Interrupts.Attach_Handler (DMA_In_Handler'Access,
                                     RP2040_SVD.Interrupts.DMA_IRQ_1_Interrupt,
                                     RP_Interrupts.Interrupt_Priority'Last);
+
+      Cortex_M.NVIC.Set_Priority (RP2040_SVD.Interrupts.DMA_IRQ_1_Interrupt,
+                                  Cortex_M.NVIC.Interrupt_Priority'First);
+
 
       DMA_Config.Trigger := I2S_IN_DMA_Trigger;
       DMA_Config.High_Priority := False;
