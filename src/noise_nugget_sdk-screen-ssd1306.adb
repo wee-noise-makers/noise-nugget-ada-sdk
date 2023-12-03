@@ -9,13 +9,10 @@ with RP.Timer; use RP.Timer;
 
 package body Noise_Nugget_SDK.Screen.SSD1306 is
 
-   SPI         : RP.SPI.SPI_Port renames RP.Device.SPI_1;
-   DMA_Trigger : constant RP.DMA.DMA_Request_Trigger := RP.DMA.SPI1_TX;
-
-   N_Reset : RP.GPIO.GPIO_Point := (Pin => 8);
-   DC      : RP.GPIO.GPIO_Point := (Pin => 9);
-   SCK     : RP.GPIO.GPIO_Point := (Pin => 10); -- D0
-   MOSI    : RP.GPIO.GPIO_Point := (Pin => 11); -- D1
+   N_Reset : RP.GPIO.GPIO_Point := (Pin => N_Reset_Pin);
+   DC      : RP.GPIO.GPIO_Point := (Pin => DC_Pin);
+   SCK     : RP.GPIO.GPIO_Point := (Pin => SCK_Pin); -- D0
+   MOSI    : RP.GPIO.GPIO_Point := (Pin => MOSI_Pin); -- D1
 
    subtype Framebuffer is SPI_Data_8b (0 .. (Width * (Height / 8)) - 1);
    Screen_Pixels : array (Boolean) of Framebuffer;
@@ -125,7 +122,6 @@ package body Noise_Nugget_SDK.Screen.SSD1306 is
 
       -- DMA --
       declare
-         use RP.DMA;
          Config : DMA_Configuration;
       begin
          Config.Trigger := DMA_Trigger;
