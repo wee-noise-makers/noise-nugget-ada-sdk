@@ -1,5 +1,3 @@
-with RP.GPIO;
-
 with Noise_Nugget_SDK.Button_Matrix_Definition;
 
 generic

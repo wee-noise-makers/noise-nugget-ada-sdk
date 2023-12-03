@@ -1,3 +1,5 @@
+with RP.GPIO;
+
 package body Noise_Nugget_SDK.Button_Matrix is
 
    use Definition;
@@ -13,12 +15,21 @@ package body Noise_Nugget_SDK.Button_Matrix is
    ------------
 
    procedure Update is
+      Busy : Integer := 0
+        with Volatile;
    begin
       for Col in Column_Range loop
          Column_Points (Col).Set;
+
+         --  Short buzy loop to wait for the column to be set
+         for X in 1 .. 50 loop
+            Busy := X;
+         end loop;
+
          for Row in Row_Range loop
             Last_State (Col, Row) := Row_Points (Row).Set;
          end loop;
+
          Column_Points (Col).Clear;
       end loop;
    end Update;
