@@ -17,23 +17,24 @@ with BBqueue.Buffers; use BBqueue.Buffers;
 
 package body Noise_Nugget_SDK.MIDI is
 
-   Decoder_Queue : Standard.MIDI.Decoder.Queue.Instance (Capacity => 256);
-   Encoder_Queue : Standard.MIDI.Encoder.Queue.Instance (Capacity => 1024);
+   Decoder_Queue : Standard.MIDI.Decoder.Queue.Instance
+     (Decoder_Queue_Capacity);
+
+   Encoder_Queue : Standard.MIDI.Encoder.Queue.Instance
+     (Encoder_Queue_Capacity);
 
    Out_Grant : BBqueue.Buffers.Read_Grant;
 
-   UART           : RP.UART.UART_Port renames RP.Device.UART_0;
-   DMA_TX_Trigger : constant RP.DMA.DMA_Request_Trigger := RP.DMA.UART0_TX;
-   UART_TX        : RP.GPIO.GPIO_Point := (Pin => 12);
-   UART_RX        : RP.GPIO.GPIO_Point := (Pin => 13);
+   UART_TX        : RP.GPIO.GPIO_Point := (Pin => TX_Pin);
+   UART_RX        : RP.GPIO.GPIO_Point := (Pin => RX_Pin);
 
-   procedure UART0_RX_Handler;
+   procedure UART_RX_Handler;
 
-   ----------------------
-   -- UART0_RX_Handler --
-   ----------------------
+   ---------------------
+   -- UART_RX_Handler --
+   ---------------------
 
-   procedure UART0_RX_Handler is
+   procedure UART_RX_Handler is
    begin
 
       case UART.Receive_Status is
@@ -55,8 +56,8 @@ package body Noise_Nugget_SDK.MIDI is
 
       end case;
 
-      --  UART0.Clear_IRQ (RP.UART.Receive);
-   end UART0_RX_Handler;
+      --  UART.Clear_IRQ (RP.UART.Receive);
+   end UART_RX_Handler;
 
    ----------------
    -- Initialize --
@@ -94,10 +95,10 @@ package body Noise_Nugget_SDK.MIDI is
       UART.Set_FIFO_IRQ_Level (RX => RP.UART.Lvl_Eighth,
                                TX => RP.UART.Lvl_Eighth);
 
-      RP_Interrupts.Attach_Handler (UART0_RX_Handler'Access,
-                                    RP2040_SVD.Interrupts.UART0_Interrupt,
+      RP_Interrupts.Attach_Handler (UART_RX_Handler'Unrestricted_Access,
+                                    UART_Interrupt,
                                     System.Interrupt_Priority'First);
-      Cortex_M.NVIC.Enable_Interrupt (RP2040_SVD.Interrupts.UART0_Interrupt);
+      Cortex_M.NVIC.Enable_Interrupt (UART_Interrupt);
    end Initialize;
 
    ----------
@@ -139,6 +140,17 @@ package body Noise_Nugget_SDK.MIDI is
       end if;
 
    end Flush_Output;
+
+   ---------------
+   -- Get_Input --
+   ---------------
+
+   procedure Get_Input (Msg     : out Standard.MIDI.Message;
+                        Success : out Boolean)
+   is
+   begin
+      Standard.MIDI.Decoder.Queue.Pop (Decoder_Queue, Msg, Success);
+   end Get_Input;
 
    ----------------------------
    -- For_Each_Input_Message --
