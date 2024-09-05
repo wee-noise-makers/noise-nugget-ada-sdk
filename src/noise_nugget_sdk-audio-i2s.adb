@@ -1,3 +1,4 @@
+with System; use System;
 with HAL; use HAL;
 with RP.GPIO;
 with RP.DMA;
@@ -38,6 +39,11 @@ package body Noise_Nugget_SDK.Audio.I2S is
 
       if G_Output_Callback /= null then
          G_Output_Callback.all (Buffer, Len);
+
+         if Buffer = System.Null_Address then
+            Buffer := Dev_Null'Address;
+            Len := Dev_Null'Length;
+         end if;
       else
          Buffer := Zeroes'Address;
          Len := Zeroes'Length;
@@ -63,6 +69,11 @@ package body Noise_Nugget_SDK.Audio.I2S is
 
       if G_Input_Callback /= null then
          G_Input_Callback.all (Buffer, Len);
+
+         if Buffer = System.Null_Address then
+            Buffer := Dev_Null'Address;
+            Len := Dev_Null'Length;
+         end if;
       else
          Buffer := Dev_Null'Address;
          Len := Dev_Null'Length;

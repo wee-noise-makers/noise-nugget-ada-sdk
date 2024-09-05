@@ -16,6 +16,10 @@ package Noise_Nugget_SDK.Audio is
 
    procedure Set_HP_Volume (L, R : Audio_Volume);
 
+   procedure Enable_Speaker (L, R : Boolean; Gain : HAL.UInt2 := 0);
+   procedure Set_Speaker_Volume (L, R : Audio_Volume);
+   procedure Set_Line_Out_Volume (L, R : Audio_Volume);
+
    type Line_In_Id is range 1 .. 3;
 
    procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume);
