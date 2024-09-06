@@ -11,6 +11,12 @@ private package Noise_Nugget_SDK.Audio.AIC3105 is
    procedure Set_Speaker_Volume (L, R : Audio_Volume)
                                  renames Set_Line_Out_Volume;
 
+   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume);
+
+   procedure Set_ADC_Volume (L, R : Audio_Volume);
+
+   procedure Enable_Mic_Bias;
+
 private
 
    type Out_Mixer_Source

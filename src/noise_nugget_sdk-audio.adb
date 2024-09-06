@@ -30,16 +30,12 @@ package body Noise_Nugget_SDK.Audio is
    procedure Set_Line_Out_Volume (L, R : Audio_Volume)
                                  renames AIC3105.Set_Line_Out_Volume;
 
-   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume) is null;
-                              --  renames AC3105.Set_Line_Volume;
-   procedure Enable_Mic (L, R : Boolean) is null;
-   --  renames AC3105.Enable_Mic;
+   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume)
+                              renames AIC3105.Set_Line_Volume;
 
-   procedure Set_Mic_Boost (L, R : Audio_Volume) is null;
-   --  renames AC3105.Set_Mic_Boost;
-   procedure Set_ADC_Volume (L, R : Audio_Volume) is null;
-   --  renames AC3105.Set_ADC_Volume;
-   procedure Mixer_To_Output (L, R : Boolean) is null;
-   --  renames AC3105.Mixer_To_Output;
+   procedure Set_ADC_Volume (L, R : Audio_Volume)
+                             renames AIC3105.Set_ADC_Volume;
+
+   procedure Enable_Mic_Bias renames AIC3105.Enable_Mic_Bias;
 
 end Noise_Nugget_SDK.Audio;

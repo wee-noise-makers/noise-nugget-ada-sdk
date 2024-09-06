@@ -24,16 +24,9 @@ package Noise_Nugget_SDK.Audio is
 
    procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume);
 
-   procedure Enable_Mic (L, R : Boolean);
-   --  Enable input 1 as single-ended microphone input
-
-   procedure Set_Mic_Boost (L, R : Audio_Volume);
-   --  Set volume boost for the microphone input
-
    procedure Set_ADC_Volume (L, R : Audio_Volume);
    --  Set Analog to Digital Converter volume
 
-   procedure Mixer_To_Output (L, R : Boolean);
-   --  Enable intrnal bypass from inputs to output
+   procedure Enable_Mic_Bias;
 
 end Noise_Nugget_SDK.Audio;

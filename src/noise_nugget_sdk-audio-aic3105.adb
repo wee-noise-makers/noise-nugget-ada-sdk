@@ -279,24 +279,6 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
 
       Noise_Nugget_SDK.Audio.IO_Expander.Enable_Codec;
 
-      --  loop
-      --     for X in HAL.UInt7 loop
-      --        declare
-      --           Status : RP.I2C.I2C_Status;
-      --           use Noise_Nugget_SDK.I2C;
-      --        begin
-      --           Clear_Error;
-      --           Set_Address (X);
-      --           Start_Write;
-      --           Write (16#42#, Status);
-      --           RP.Device.Timer.Delay_Milliseconds (1);
-      --        end;
-      --     end loop;
-      --     RP.Device.Timer.Delay_Milliseconds (1000);
-      --  end loop;
-
-      pragma Style_Checks ("M120");
-
       --  Select Page 0
       Success := Write_Register_Bit (AIC3X_PAGE_SELECT, 0, 0);
 
@@ -392,12 +374,6 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       --  Power outputs
       Power_On (HP_L_OUT);
       Power_On (HP_R_OUT);
-      --  Success := Success and then Write_Register_Bit (LLOPM_CTRL, 0, 1);
-      --  Success := Success and then Write_Register_Bit (RLOPM_CTRL, 0, 1);
-      --  Success := Success and then Write_Register_Bit (HPLOUT_CTRL, 0, 1);
-      --  Success := Success and then Write_Register_Bit (HPROUT_CTRL, 0, 1);
-      --  Success := Success and then Write_Register_Bit (HPLCOM_CTRL, 0, 1);
-      --  Success := Success and then Write_Register_Bit (HPRCOM_CTRL, 0, 1);
 
       --  L and R DACs Power On
       Success := Success and then
@@ -417,21 +393,20 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       Success := Success and then
         Write_Register_Bit (RDAC_VOL, 7, 0);
 
+      --  Left-DAC output selects DAC_L1 path.
+      Success := Success and then
+        Write_Register_Multi (DAC_LINE_MUX, 7, 6, 0);
+      --  Right-DAC output selects DAC_R1 path.
+      Success := Success and then
+        Write_Register_Multi (DAC_LINE_MUX, 5, 4, 0);
+
       --  DAC to HP
       Route (DAC_L1, HP_L_OUT);
       Route (DAC_R1, HP_R_OUT);
-      --  Success := Success and then
-      --    Write_Register_Bit (DACL1_2_HPLOUT_VOL, 7, 1);
-      --  Success := Success and then
-      --    Write_Register_Bit (DACR1_2_HPROUT_VOL, 7, 1);
 
       --  DAC to Line-Out
       Route (DAC_L1, LINE_OUT_L);
       Route (DAC_R1, LINE_OUT_R);
-      --  Success := Success and then
-      --    Write_Register_Bit (DACL1_2_LLOPM_VOL, 7, 1);
-      --  Success := Success and then
-      --    Write_Register_Bit (DACR1_2_RLOPM_VOL, 7, 1);
 
       --  Enable Left ADC
       Success := Success and then
@@ -446,34 +421,6 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       --  Unmute R ADC PGA
       Success := Success and then
         Write_Register_Bit (RADC_VOL, 7, 0);
-
-      --  Left-DAC output selects DAC_L1 path.
-      Success := Success and then
-        Write_Register_Multi (DAC_LINE_MUX, 7, 6, 0);
-      --  Right-DAC output selects DAC_R1 path.
-      Success := Success and then
-        Write_Register_Multi (DAC_LINE_MUX, 5, 4, 0);
-
-      --  Line 1 Left to Left ADC PGA
-      Success := Success and then
-        Write_Register_Multi (LINE1L_2_LADC_CTRL, 6, 3, 0);
-      --  Line 1 Right to Right ADC PGA
-      Success := Success and then
-        Write_Register_Multi (LINE1R_2_RADC_CTRL, 6, 3, 0);
-
-      --  Line 2 Left to Left ADC PGA
-      Success := Success and then
-        Write_Register_Multi (LINE2L_2_LADC_CTRL, 6, 3, 0);
-      --  Line 2 Right to Right ADC PGA
-      Success := Success and then
-        Write_Register_Multi (LINE2R_2_RADC_CTRL, 6, 3, 0);
-
-      --  MIC3L/R to Left ADC Control Register
-      Success := Success and then
-        Write_Register (MIC3LR_2_LADC_CTRL, 2#1111_0000#);
-      --  MIC3L/R to Right ADC Control Register
-      Success := Success and then
-        Write_Register (MIC3LR_2_LADC_CTRL, 2#0000_1111#);
 
       --  Programs high-power outputs for ac-coupled driver configuration
       Success := Success and then
@@ -490,13 +437,6 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       --  Unmute outputs
       Unmute (HP_L_OUT);
       Unmute (HP_R_OUT);
-
-      declare
-         Unused : HAL.UInt8;
-      begin
-         Unused := Read_Register (DAC_PWR);
-         Unused := Read_Register (MODULE_POWER_STATUS);
-      end;
 
       return Success;
    end Initialize;
@@ -666,5 +606,93 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       IO_Expander.Enable_Speaker (L, R);
 
    end Enable_Speaker;
+
+   ---------------------
+   -- Set_Line_Volume --
+   ---------------------
+
+   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume) is
+      function Line_Boost
+      is new Gen_Volume_To_UInt (HAL.UInt4,
+                                 Min => 2#1000#,
+                                 Max => 0,
+                                 Mute_Value => 2#1111#);
+
+      LB : constant HAL.UInt8 := HAL.UInt8 (Line_Boost (L));
+      RB : constant HAL.UInt8 := HAL.UInt8 (Line_Boost (R));
+   begin
+      case Line is
+         when 1 =>
+            if not Write_Register_Multi (LINE1L_2_LADC_CTRL, 6, 3, LB) then
+               raise Program_Error;
+            end if;
+            if not Write_Register_Multi (LINE1R_2_RADC_CTRL, 6, 3, RB) then
+               raise Program_Error;
+            end if;
+
+         when 2 =>
+            if not Write_Register_Multi (LINE2L_2_LADC_CTRL, 6, 3, LB) then
+               raise Program_Error;
+            end if;
+            if not Write_Register_Multi (LINE2R_2_RADC_CTRL, 6, 3, RB) then
+               raise Program_Error;
+            end if;
+
+         when 3 =>
+            if not Write_Register_Multi (MIC3LR_2_LADC_CTRL, 7, 4, LB) then
+               raise Program_Error;
+            end if;
+            if not Write_Register_Multi (MIC3LR_2_RADC_CTRL, 3, 0, RB) then
+               raise Program_Error;
+            end if;
+      end case;
+   end Set_Line_Volume;
+
+   --------------------
+   -- Set_ADC_Volume --
+   --------------------
+
+   procedure Set_ADC_Volume (L, R : Audio_Volume) is
+      function PGA_Volume
+      is new Gen_Volume_To_UInt (HAL.UInt7,
+                                 Min => 0,
+                                 Max => 2#111_1111#,
+                                 Mute_Value => 0);
+   begin
+      if L = 0.0 then
+         --  Mute Left ADC PGA
+         if not Write_Register (LADC_VOL, 2#1_0000000#) then
+            raise Program_Error;
+         end if;
+      else
+         --  Set Left ADC PGA Gain
+         if not Write_Register (LADC_VOL, HAL.UInt8 (PGA_Volume (L))) then
+            raise Program_Error;
+         end if;
+      end if;
+
+      if R = 0.0 then
+         --  Mute Right ADC PGA
+         if not Write_Register (RADC_VOL, 2#1_0000000#) then
+            raise Program_Error;
+         end if;
+      else
+         --  Set Right ADC PGA Gain
+         if not Write_Register (RADC_VOL, HAL.UInt8 (PGA_Volume (R))) then
+            raise Program_Error;
+         end if;
+      end if;
+   end Set_ADC_Volume;
+
+   ---------------------
+   -- Enable_Mic_Bias --
+   ---------------------
+
+   procedure Enable_Mic_Bias is
+   begin
+      if not Write_Register_Multi (MICBIAS_CTRL, 7, 6, 2#10#) then
+         raise Program_Error;
+      end if;
+   end Enable_Mic_Bias;
 
 end Noise_Nugget_SDK.Audio.AIC3105;
