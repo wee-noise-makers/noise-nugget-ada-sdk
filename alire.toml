@@ -7,8 +7,9 @@ maintainers = ["Fabien Chouteau <fabien.chouteau@gmail.com>"]
 maintainers-logins = ["Fabien-Chouteau"]
 
 [[depends-on]]
-rp2040_hal = "^2.0.0"
+rp2040_hal = "^2.3.0"
 midi = "~0.2.0"
+gnat_arm_elf = "*"
 
 [configuration.values]
 rp2040_hal.Flash_Chip = "w25qxx"

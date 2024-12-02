@@ -5,13 +5,16 @@ private package Noise_Nugget_SDK.Audio.AIC3105 is
    procedure Set_HP_Volume (L, R : Audio_Volume);
 
    procedure Enable_Line_Out (L, R : Boolean);
-   procedure Set_Line_Out_Volume (L, R : Audio_Volume);
+   procedure Set_Line_Out_Volume (L2L, R2R : Audio_Volume;
+                                  L2R, R2L : Audio_Volume := 0.0);
 
    procedure Enable_Speaker (L, R : Boolean; Gain : HAL.UInt2 := 0);
-   procedure Set_Speaker_Volume (L, R : Audio_Volume)
+   procedure Set_Speaker_Volume (L2L, R2R : Audio_Volume;
+                                 L2R, R2L : Audio_Volume := 0.0)
                                  renames Set_Line_Out_Volume;
 
-   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume);
+   procedure Set_Line_Boost (Line : Line_In_Id;
+                             L2L, L2R, R2L, R2R : Line_Boost := Disconect);
 
    procedure Set_ADC_Volume (L, R : Audio_Volume);
 

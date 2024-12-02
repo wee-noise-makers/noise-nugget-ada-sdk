@@ -560,20 +560,24 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       if L then
          Power_On (LINE_OUT_L);
          Route (DAC_L1, LINE_OUT_L);
+         Route (DAC_L1, LINE_OUT_R);
          Unmute (LINE_OUT_L);
       else
          Power_Off (LINE_OUT_L);
          Unroute (DAC_L1, LINE_OUT_L);
+         Unroute (DAC_L1, LINE_OUT_R);
          Mute (LINE_OUT_L);
       end if;
 
       if R then
          Power_On (LINE_OUT_R);
          Route (DAC_R1, LINE_OUT_R);
+         Route (DAC_R1, LINE_OUT_L);
          Unmute (LINE_OUT_R);
       else
          Power_Off (LINE_OUT_R);
          Unroute (DAC_R1, LINE_OUT_R);
+         Unroute (DAC_R1, LINE_OUT_L);
          Mute (LINE_OUT_R);
       end if;
    end Enable_Line_Out;
@@ -582,10 +586,15 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
    -- Set_Line_Out_Volume --
    -------------------------
 
-   procedure Set_Line_Out_Volume (L, R : Audio_Volume) is
+   procedure Set_Line_Out_Volume (L2L, R2R : Audio_Volume;
+                                  L2R, R2L : Audio_Volume := 0.0)
+   is
    begin
-      Set_Volume (DAC_L1, LINE_OUT_L, L);
-      Set_Volume (DAC_R1, LINE_OUT_R, R);
+      Set_Volume (DAC_L1, LINE_OUT_L, L2L);
+      Set_Volume (DAC_L1, LINE_OUT_R, L2R);
+
+      Set_Volume (DAC_R1, LINE_OUT_R, R2R);
+      Set_Volume (DAC_R1, LINE_OUT_L, R2L);
    end Set_Line_Out_Volume;
 
    --------------------
@@ -597,8 +606,8 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
    begin
       case Gain is
          when 0 => Set_Speaker_Gain (False, False);
-         when 1 => Set_Speaker_Gain (False, True);
-         when 2 => Set_Speaker_Gain (True, False);
+         when 1 => Set_Speaker_Gain (True, False);
+         when 2 => Set_Speaker_Gain (False, True);
          when 3 => Set_Speaker_Gain (True, True);
       end case;
 
@@ -607,46 +616,63 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
 
    end Enable_Speaker;
 
-   ---------------------
-   -- Set_Line_Volume --
-   ---------------------
+   --------------------
+   -- Set_Line_Boost --
+   --------------------
 
-   procedure Set_Line_Volume (Line : Line_In_Id; L, R : Audio_Volume) is
-      function Line_Boost
-      is new Gen_Volume_To_UInt (HAL.UInt4,
-                                 Min => 2#1000#,
-                                 Max => 0,
-                                 Mute_Value => 2#1111#);
+   procedure Set_Line_Boost (Line : Line_In_Id;
+                             L2L, L2R, R2L, R2R : Line_Boost := Disconect)
+   is
+      function To_Reg_Val (B : Line_Boost) return UInt8 is
+      begin
+         if B = 0 then
+            return 2#1111#; -- Mute/disconnect
+         else
+            return (2#1000# + 1) - UInt8 (B);
+         end if;
+      end To_Reg_Val;
 
-      LB : constant HAL.UInt8 := HAL.UInt8 (Line_Boost (L));
-      RB : constant HAL.UInt8 := HAL.UInt8 (Line_Boost (R));
+      L2LB : constant HAL.UInt8 := To_Reg_Val (L2L);
+      L2RB : constant HAL.UInt8 := To_Reg_Val (L2R);
+      R2LB : constant HAL.UInt8 := To_Reg_Val (R2L);
+      R2RB : constant HAL.UInt8 := To_Reg_Val (R2R);
    begin
       case Line is
          when 1 =>
-            if not Write_Register_Multi (LINE1L_2_LADC_CTRL, 6, 3, LB) then
+            if not Write_Register_Multi (LINE1L_2_LADC_CTRL, 6, 3, L2LB) then
                raise Program_Error;
             end if;
-            if not Write_Register_Multi (LINE1R_2_RADC_CTRL, 6, 3, RB) then
+            if not Write_Register_Multi (LINE1L_2_RADC_CTRL, 6, 3, L2RB) then
+               raise Program_Error;
+            end if;
+            if not Write_Register_Multi (LINE1R_2_LADC_CTRL, 6, 3, R2LB) then
+               raise Program_Error;
+            end if;
+            if not Write_Register_Multi (LINE1R_2_RADC_CTRL, 6, 3, R2RB) then
                raise Program_Error;
             end if;
 
          when 2 =>
-            if not Write_Register_Multi (LINE2L_2_LADC_CTRL, 6, 3, LB) then
+            if not Write_Register_Multi (LINE2L_2_LADC_CTRL, 6, 3, L2LB) then
                raise Program_Error;
             end if;
-            if not Write_Register_Multi (LINE2R_2_RADC_CTRL, 6, 3, RB) then
+            if not Write_Register_Multi (LINE2R_2_RADC_CTRL, 6, 3, R2LB) then
                raise Program_Error;
             end if;
 
          when 3 =>
-            if not Write_Register_Multi (MIC3LR_2_LADC_CTRL, 7, 4, LB) then
+            if not Write_Register (MIC3LR_2_LADC_CTRL,
+                                   Shift_Left (L2LB, 4) + R2LB)
+            then
                raise Program_Error;
             end if;
-            if not Write_Register_Multi (MIC3LR_2_RADC_CTRL, 3, 0, RB) then
+            if not Write_Register (MIC3LR_2_RADC_CTRL,
+                                   Shift_Left (L2RB, 4) + R2RB)
+            then
                raise Program_Error;
             end if;
       end case;
-   end Set_Line_Volume;
+   end Set_Line_Boost;
 
    --------------------
    -- Set_ADC_Volume --

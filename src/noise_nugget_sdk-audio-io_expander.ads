@@ -6,4 +6,6 @@ private package Noise_Nugget_SDK.Audio.IO_Expander is
 
    procedure Set_Speaker_Gain (G0, G1 : Boolean);
 
+   function Jack_Detect return Boolean;
+
 end Noise_Nugget_SDK.Audio.IO_Expander;
