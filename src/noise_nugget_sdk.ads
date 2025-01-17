@@ -6,6 +6,8 @@ package Noise_Nugget_SDK
 with Elaborate_Body
 is
 
+   type Button_Event is (Up, Down, Falling, Rising);
+
 private
 
    use RP.DMA;

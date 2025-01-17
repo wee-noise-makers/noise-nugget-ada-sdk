@@ -7,8 +7,14 @@ package body Noise_Nugget_SDK.Button_Matrix is
    Column_Points : array (Column_Range) of RP.GPIO.GPIO_Point;
    Row_Points : array (Row_Range) of RP.GPIO.GPIO_Point;
 
+   type Pin_Low_Array is array (Column_Range, Row_Range) of Boolean;
+
    Last_State : Definition.Button_Pressed_Array :=
-     (others => (others => False));
+     (others => False);
+   Prev_State : Definition.Button_Pressed_Array :=
+     (others => False);
+   Last_Events : Definition.Button_Event_Array :=
+     (others => Up);
 
    ------------
    -- Update --
@@ -17,6 +23,8 @@ package body Noise_Nugget_SDK.Button_Matrix is
    procedure Update is
       Busy : Integer := 0
         with Volatile;
+
+      Pin_State : Pin_Low_Array;
    begin
       for Col in Column_Range loop
          Column_Points (Col).Set;
@@ -27,11 +35,22 @@ package body Noise_Nugget_SDK.Button_Matrix is
          end loop;
 
          for Row in Row_Range loop
-            Last_State (Col, Row) := Row_Points (Row).Set;
+            Pin_State (Col, Row) := Row_Points (Row).Set;
          end loop;
 
          Column_Points (Col).Clear;
       end loop;
+
+      Prev_State := Last_State;
+      for B in Definition.Button_Id_Type loop
+         Last_State (B) := Pin_State (Mapping (B).Col, Mapping (B).Row);
+         if Last_State (B) = Prev_State (B) then
+            Last_Events (B) := (if Last_State (B) then Down else Up);
+         else
+            Last_Events (B) := (if Last_State (B) then Falling else Rising);
+         end if;
+      end loop;
+
    end Update;
 
    -----------
@@ -42,6 +61,15 @@ package body Noise_Nugget_SDK.Button_Matrix is
    begin
       return Last_State;
    end State;
+
+   ------------
+   -- Events --
+   ------------
+
+   function Events return Definition.Button_Event_Array is
+   begin
+      return Last_Events;
+   end Events;
 
 begin
 
