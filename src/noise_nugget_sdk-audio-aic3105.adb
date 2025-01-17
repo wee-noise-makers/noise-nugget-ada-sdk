@@ -9,9 +9,8 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
 
    AIC3105_Addr : constant := 16#18#;
 
-   --  The WM8960 is read-only, it's not possible to read the registers from
-   --  the I2C interface. We therefore keep a local copy of the registers that
-   --  we update when writing to the device.
+   --  We keep a local copy of the registers that we update when writing to
+   --  the device.
    Register_Local_Copy : array (HAL.UInt8 range 0 .. 109) of HAL.UInt8 :=
      (2#0000000_0#, -- 0
       2#0_0000000#, -- 1

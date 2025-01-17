@@ -7,19 +7,13 @@ maintainers = ["Fabien Chouteau <fabien.chouteau@gmail.com>"]
 maintainers-logins = ["Fabien-Chouteau"]
 
 [[depends-on]]
-rp2040_hal = "^2.3.0"
-midi = "~0.2.0"
+rp2040_hal = "~2.4.1"
+midi = "~1.0.0"
 gnat_arm_elf = "*"
 
 [configuration.values]
 rp2040_hal.Flash_Chip = "w25qxx"
 
-[gpr-set-externals]
-BBQUEUE_COMPILE_CHECKS = "disabled"
-BBQUEUE_RUNTIME_CHECKS = "disabled"
-BBQUEUE_STYLE_CHECKS   = "disabled"
-BBQUEUE_CONTRACTS      = "disabled"
-BBQUEUE_BUILD_MODE     = "optimize"
-
 [[pins]]
-rp2040_hal = { url="https://github.com/JeremyGrosser/rp2040_hal" }
+rp2040_hal = { url="https://github.com/JeremyGrosser/rp2040_hal", commit="ef10b88494060944243f7cf0d12b3a02719c9d4b" }
+midi = { url="https://github.com/Fabien-Chouteau/midi", branch="release/1.0" }

@@ -11,8 +11,7 @@ generic
    MOSI_Pin    : RP.GPIO.GPIO_Pin; -- D1
 package Noise_Nugget_SDK.Screen.SSD1306 is
 
-   --  Right now this package only supports 128x64 SSD1306 OLED screen
-   --  connected to pins 8, 9, 10, and 11.
+   --  Right now this package only supports 128x64 SSD1306 OLED screen.
 
    Width : constant := 128;
    Height : constant := 64;
