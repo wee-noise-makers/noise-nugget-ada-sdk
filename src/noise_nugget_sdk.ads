@@ -55,18 +55,9 @@ private
 
    -- PIO 0 --
 
-   Encoder_PIO    :          RP.PIO.PIO_Device renames RP.Device.PIO_0;
-   Encoder_1_SM   : constant RP.PIO.PIO_SM := 0;
-   Encoder_2_SM   : constant RP.PIO.PIO_SM := 1;
-   Encoder_1_IRQ  : constant RP.PIO.PIO_IRQ_ID := 0;
-   Encoder_2_IRQ  : constant RP.PIO.PIO_IRQ_ID := 1;
-   Encoder_Offset : constant RP.PIO.PIO_Address := 0;
-   Encoder_Last   : constant RP.PIO.PIO_Address :=
-     Encoder_Offset + Pio_Rotary_Encoder_Program_Instructions'Length - 1;
-
    WS2812_PIO    :          RP.PIO.PIO_Device renames RP.Device.PIO_0;
    WS2812_SM     : constant RP.PIO.PIO_SM := 2;
-   WS2812_Offset : constant RP.PIO.PIO_Address := Encoder_Last + 1;
+   WS2812_Offset : constant RP.PIO.PIO_Address := 0;
 
    -- PIO 1 --
 
