@@ -272,7 +272,60 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
    -- Initialize --
    ----------------
 
-   function Initialize return Boolean is
+   function Initialize (SR : DAC_Sample_Rate) return Boolean is
+      type Clock_Cfg is record
+         J, R, P : UInt8;
+         D : UInt16;
+      end record;
+
+      --  fS(ref) = (PLLCLK_IN x J.D x R)/(2048 x P)
+      --
+      --  Using a 24MHz MCLK:
+      --  fS(ref) = (PLLCLK_IN x J.D x R)/(2048 x P)
+
+      --  fS(ref) = (24_000_000 x 8.1920 x 1)/(2048 x 2) = 48_000.00Hz
+      FS_48000 : constant Clock_Cfg := (J => 8,
+                                        D => 1920,
+                                        R => 1,
+                                        P => 2);
+
+      --  fS(ref) = (24_000_000 x 7.5264 x 1)/(2048 x 2) = 44_100.00Hz
+      FS_44100 : constant Clock_Cfg := (J => 7,
+                                        D => 5264,
+                                        R => 1,
+                                        P => 2);
+
+      --  fS(ref) = (24_000_000 x 5.4613 x 1)/(2048 x 2) = 31_999.80Hz
+      FS_32000 : constant Clock_Cfg := (J => 5,
+                                        D => 4613,
+                                        R => 1,
+                                        P => 2);
+
+      --  fS(ref) = (24_000_000 x 7.5264 x 1)/(2048 x 4) = 32_000.00Hz
+      FS_22050 : constant Clock_Cfg := (J => 7,
+                                        D => 5264,
+                                        R => 1,
+                                        P => 4);
+
+      --  fS(ref) = (24_000_000 x 5.4613 x 1)/(2048 x 4) = 15_999.90Hz
+      FS_16000 : constant Clock_Cfg := (J => 5,
+                                        D => 4613,
+                                        R => 1,
+                                        P => 4);
+
+      --  fS(ref) = (24_000_000 x 5.4613 x 1)/(2048 x 8) = 7_999.95Hz
+      FS_8000 : constant Clock_Cfg := (J => 5,
+                                       D => 4613,
+                                       R => 1,
+                                       P => 8);
+
+      Config : constant Clock_Cfg := (case SR is
+                                         when SR_8000  => FS_8000,
+                                         when SR_16000 => FS_16000,
+                                         when SR_32000 => FS_32000,
+                                         when SR_22050 => FS_22050,
+                                         when SR_44100 => FS_44100,
+                                         when SR_48000 => FS_48000);
       Success : Boolean;
    begin
 
@@ -286,13 +339,6 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
         Write_Register_Bit (AIC3X_RESET, 7, 1);
 
       --  Let's start with clock configuration.
-      --
-      --  fS(ref) = (PLLCLK_IN × J.D × R)/(2048 × P)
-      --
-      --  Using a 24MHz MCLK:
-      --  fS(ref) = (PLLCLK_IN × J.D × R)/(2048 × P)
-      --  fS(ref) = (24_000_000 × 7.5264 × 1)/(2048 × 2) = 44_100.00Hz
-      --
       --  PLLCLK_IN can be either MCLK or BCLK. Using BCLK (bit clock) we can
       --  avoid using an extra GPIO from the MCU or an extra external clock.
       --
@@ -317,19 +363,19 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
 
       --  PLL P = 2
       Success := Success and then
-        Write_Register_Multi (AIC3X_PLL_PROGA_REG, 2, 0, 2);
+        Write_Register_Multi (AIC3X_PLL_PROGA_REG, 2, 0, Config.P);
 
       --  PLL R = 1
       Success := Success and then
-        Write_Register_Multi (AIC3X_OVRF_STATUS_AND_PLLR_REG, 3, 0, 1);
+        Write_Register_Multi (AIC3X_OVRF_STATUS_AND_PLLR_REG, 3, 0, Config.R);
 
       --  PLL J = 7
       Success := Success and then
-        Write_Register_Multi (AIC3X_PLL_PROGB_REG, 7, 2, 7);
+        Write_Register_Multi (AIC3X_PLL_PROGB_REG, 7, 2, Config.J);
 
       --  PLL D = 5264
       declare
-         PLL_D : constant UInt16 := 5264;
+         PLL_D : constant UInt16 := Config.D;
          REG_C : constant UInt16 := Shift_Right (PLL_D, 6);
          REG_D : constant UInt16 := PLL_D and 16#3F#;
       begin
@@ -369,6 +415,14 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
       --  mode, 16bits words,
       Success := Success and then
         Write_Register_Multi (AIC3X_ASD_INTF_CTRLB, 7, 6, 2#00#);
+
+      --  Output Driver Power-On Delay Control
+      Success := Success and then
+        Write_Register_Multi (HPOUT_POP_REDUCTION, 7, 4, 2#1000#);
+
+      --  Driver Ramp-Up Step Timing Control
+      Success := Success and then
+        Write_Register_Multi (HPOUT_POP_REDUCTION, 3, 2, 2#01#);
 
       --  Power outputs
       Power_On (HP_L_OUT);

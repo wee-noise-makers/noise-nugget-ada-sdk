@@ -13,13 +13,24 @@ package body Noise_Nugget_SDK.Audio is
                    Input_Callback  : Audio_Callback)
                    return Boolean
    is
+      SR : AIC3105.DAC_Sample_Rate;
    begin
+      case Sample_Rate is
+         when  8000  => SR := AIC3105.SR_8000;
+         when 16000  => SR := AIC3105.SR_16000;
+         when 22050  => SR := AIC3105.SR_22050;
+         when 32000  => SR := AIC3105.SR_32000;
+         when 44100  => SR := AIC3105.SR_44100;
+         when 48000  => SR := AIC3105.SR_48000;
+         when others => return False;
+      end case;
+
       if not I2S.Initialize (Sample_Rate, Output_Callback, Input_Callback)
       then
          return False;
       end if;
 
-      return AIC3105.Initialize;
+      return AIC3105.Initialize (SR);
    end Start;
 
    procedure Set_HP_Volume (L, R : Audio_Volume)

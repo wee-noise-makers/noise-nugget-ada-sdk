@@ -1,6 +1,9 @@
 private package Noise_Nugget_SDK.Audio.AIC3105 is
 
-   function Initialize return Boolean;
+   type DAC_Sample_Rate is (SR_8000, SR_16000, SR_22050,
+                            SR_32000, SR_44100, SR_48000);
+
+   function Initialize (SR : DAC_Sample_Rate) return Boolean;
 
    procedure Set_HP_Volume (L, R : Audio_Volume);
 
