@@ -709,7 +709,7 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
             if not Write_Register_Multi (LINE2L_2_LADC_CTRL, 6, 3, L2LB) then
                raise Program_Error;
             end if;
-            if not Write_Register_Multi (LINE2R_2_RADC_CTRL, 6, 3, R2LB) then
+            if not Write_Register_Multi (LINE2R_2_RADC_CTRL, 6, 3, R2RB) then
                raise Program_Error;
             end if;
 
