@@ -1,6 +1,6 @@
 name = "noise_nugget_sdk"
 description = "Ada Software Development Kit for the Noise Nugget"
-version = "1.0.0"
+version = "1.0.1"
 
 authors = ["Fabien Chouteau"]
 maintainers = ["Fabien Chouteau <fabien.chouteau@gmail.com>"]
