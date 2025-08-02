@@ -34,5 +34,4 @@ begin
       RP.Multicore.Spinlocks.Release (Id);
    end loop;
 
-
 end Noise_Nugget_SDK;

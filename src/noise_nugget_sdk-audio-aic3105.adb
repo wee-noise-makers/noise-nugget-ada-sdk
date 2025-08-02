@@ -207,7 +207,9 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
    -- Read_Register --
    -------------------
 
-   function Read_Register (Reg : HAL.UInt8) return HAL.UInt8 is
+   function Read_Register (Reg : HAL.UInt8) return HAL.UInt8
+     with Unreferenced
+   is
 
       use Noise_Nugget_SDK.I2C;
       use HAL.I2C;
