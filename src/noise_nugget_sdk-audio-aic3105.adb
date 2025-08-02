@@ -422,7 +422,15 @@ package body Noise_Nugget_SDK.Audio.AIC3105 is
 
       --  Driver Ramp-Up Step Timing Control
       Success := Success and then
-        Write_Register_Multi (HPOUT_POP_REDUCTION, 3, 2, 2#01#);
+        Write_Register_Multi (HPOUT_POP_REDUCTION, 3, 2, 2#11#);
+
+      --  Increasing DAC Dynamic Range
+      Success := Success and then
+        Write_Register_Multi (DAC_ICC_ADJ, 7, 6, 2#11#);
+
+      --  Set common-mode voltage to 1.5 for 3V-3.6 AVDD, 1.65V-1.95V DVDD
+      Success := Success and then
+        Write_Register_Multi (HPOUT_SC, 7, 6, 2#01#);
 
       --  Power outputs
       Power_On (HP_L_OUT);
