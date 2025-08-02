@@ -5,10 +5,7 @@ with Cortex_M.NVIC;
 with MIDI.Decoder.Queue;
 with MIDI.Encoder.Queue;
 
-with RP.UART;
 with RP.GPIO; use RP.GPIO;
-with RP_Interrupts;
-with RP2040_SVD.Interrupts;
 
 with HAL; use HAL;
 

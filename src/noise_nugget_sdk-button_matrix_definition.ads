@@ -23,5 +23,4 @@ package Noise_Nugget_SDK.Button_Matrix_Definition is
 
    type Button_Mapping_Array is array (Button_Id_Type) of Pin_Map;
 
-
 end Noise_Nugget_SDK.Button_Matrix_Definition;

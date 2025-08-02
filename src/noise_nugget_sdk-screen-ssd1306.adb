@@ -2,8 +2,6 @@ with HAL;     use HAL;
 with HAL.SPI; use HAL.SPI;
 
 with RP.SPI; use RP.SPI;
-with RP.DMA;
-with RP.Device;
 with RP.GPIO; use RP.GPIO;
 with RP.Timer; use RP.Timer;
 

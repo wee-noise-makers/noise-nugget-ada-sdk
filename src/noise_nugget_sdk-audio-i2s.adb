@@ -2,7 +2,6 @@ with System; use System;
 with HAL; use HAL;
 with RP.GPIO;
 with RP.DMA;
-with RP.PWM;
 with RP_Interrupts;
 with RP2040_SVD.Interrupts;
 with Noise_Nugget_SDK.Audio.PIO_I2S_ASM;
@@ -97,8 +96,6 @@ package body Noise_Nugget_SDK.Audio.I2S is
       use Noise_Nugget_SDK.Audio.PIO_I2S_ASM;
 
       Config : PIO_SM_Config := Default_SM_Config;
-
-      Sample_Frequency : constant RP.Hertz := RP.Hertz (Sample_Rate);
 
       Sample_Bits       : constant := 16;
       Cycles_Per_Sample : constant := 4;
