@@ -1,6 +1,6 @@
 name = "noise_nugget_sdk"
 description = "Ada Software Development Kit for the Noise Nugget"
-version = "2.0.0-dev"
+version = "2.0.0"
 licenses = "MIT OR Apache-2.0 WITH LLVM-exception"
 website = "https://weenoisemakers.com/noise-nugget-2040/"
 tags = ["embedded", "audio", "synth", "dsp"]
