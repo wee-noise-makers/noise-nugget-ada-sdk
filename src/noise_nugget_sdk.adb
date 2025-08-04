@@ -14,6 +14,7 @@ begin
                             when SYS_48MHz  => RP.Clock.PLL_48_MHz,
                             when SYS_125MHz => RP.Clock.PLL_125_MHz,
                             when SYS_133MHz => RP.Clock.PLL_133_MHz,
+                            when SYS_200MHz => RP.Clock.PLL_200_MHz,
                             when SYS_250MHz => RP.Clock.PLL_250_MHz));
 
    RP.Device.PIO_0.Enable;

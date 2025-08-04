@@ -18,9 +18,7 @@ package body Noise_Nugget_SDK.I2C is
    begin
       I2C_SDA.Configure (Output, Pull_Up, RP.GPIO.I2C);
       I2C_SCL.Configure (Output, Pull_Up, RP.GPIO.I2C);
-      RP.Device.I2CM_1.Configure
-        (Baudrate => 100_000,
-         Address_Size => RP.I2C_Master.Address_Size_7b);
+      RP.Device.I2CM_1.Configure (Baudrate => 100_000);
    end Initialize;
 
    ---------------
