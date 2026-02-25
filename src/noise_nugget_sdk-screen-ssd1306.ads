@@ -20,6 +20,7 @@ package Noise_Nugget_SDK.Screen.SSD1306 is
    type Pix_Y is range 0 .. Height - 1;
 
    procedure Set_Pixel (PX : Pix_X; PY : Pix_Y; On : Boolean := True);
+   procedure Flip_Pixel (PX : Pix_X; PY : Pix_Y);
    procedure Update;
    procedure Clear;
 

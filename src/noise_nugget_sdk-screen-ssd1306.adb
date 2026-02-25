@@ -203,6 +203,19 @@ package body Noise_Nugget_SDK.Screen.SSD1306 is
       end if;
    end Set_Pixel;
 
+   ----------------
+   -- Flip_Pixel --
+   ----------------
+
+   procedure Flip_Pixel (PX : Pix_X; PY : Pix_Y) is
+      X     : constant Natural := Natural (PX);
+      Y     : constant Natural := Natural (PY);
+      Index : constant Natural := X + (Y / 8) * Width;
+      Byte  : UInt8 renames Screen_Pixels (Write) (Framebuffer'First + Index);
+   begin
+      Byte := Byte xor Shift_Left (1, Y mod 8);
+   end Flip_Pixel;
+
 begin
    Initialize;
 end Noise_Nugget_SDK.Screen.SSD1306;
